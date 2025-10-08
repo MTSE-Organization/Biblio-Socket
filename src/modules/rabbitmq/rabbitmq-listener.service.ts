@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitmqAdminService } from './rabbitmq-admin.service';
+import { SocketGateway } from '../socket/socket.gateway';
 
 @Injectable()
 export class RabbitmqListenerService implements OnModuleInit {
@@ -9,7 +10,8 @@ export class RabbitmqListenerService implements OnModuleInit {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly rabbitMQAdmin: RabbitmqAdminService
+    private readonly rabbitMQAdmin: RabbitmqAdminService,
+    private readonly socketGateway: SocketGateway
   ) {
     this.notificationQueue = this.configService.get<string>(
       'RABBITMQ_NOTIFICATION_QUEUE'
@@ -23,12 +25,16 @@ export class RabbitmqListenerService implements OnModuleInit {
     );
   }
 
-  private handleNotification(data: string) {
-    this.logger.log(
-      `Processing message from ${this.notificationQueue}: ${data}`
+  private handleNotification(message: string) {
+    const payload = JSON.parse(message);
+    const data = JSON.parse(payload.data);
+    const { sessionId, message: notification } = data;
+
+    this.socketGateway.handleSendMessgae(
+      sessionId,
+      'notification',
+      notification
     );
-    // parse JSON nếu cần
-    // const json = JSON.parse(data)
-    // xử lý logic ở đây
+    this.logger.log(`Sent notification to session: ${sessionId}`);
   }
 }
