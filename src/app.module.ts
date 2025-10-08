@@ -9,12 +9,12 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { StartTimingMiddleware } from './common/middlewares/start-timing.middleware';
 import { JwtModule } from '@nestjs/jwt';
-import { OtpModule } from './modules/otp/otp.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { cacheConfig, jwtConfig } from './config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './modules/redis/redis.module';
 import { RabbitmqModule } from './modules/rabbitmq/rabbitmq.module';
+import { SocketModule } from './modules/socket/socket.module';
 //#endregion
 
 @Module({
@@ -24,9 +24,9 @@ import { RabbitmqModule } from './modules/rabbitmq/rabbitmq.module';
     CacheModule.registerAsync(cacheConfig),
     ScheduleModule.forRoot(),
     AuthModule,
-    OtpModule,
     RedisModule,
-    RabbitmqModule
+    RabbitmqModule,
+    SocketModule
   ]
 })
 export class AppModule implements NestModule {

@@ -30,16 +30,18 @@ export class RedisService {
       match: `${prefix}*`,
       count: 100
     });
+    const promises: Promise<number>[] = [];
 
     stream.on('data', (keys: string[]) => {
       if (keys.length) {
-        this.redisClient.del(...keys);
+        promises.push(this.redisClient.del(...keys));
       }
     });
 
-    return new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       stream.on('end', resolve);
       stream.on('error', reject);
     });
+    await Promise.all(promises);
   }
 }
