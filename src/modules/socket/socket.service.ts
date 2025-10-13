@@ -33,7 +33,7 @@ export class SocketService {
 
   async handleCacheClientSession(userSession: UserSession, client: Socket) {
     const keyType = userSession.getKeyType();
-    const key = `${keyType}_${userSession.id}_${client.id}`;
-    await this.redisService.set(key, userSession.id, 30 * 1000); // 30s
+    const key = `${keyType}:${userSession.id}:${client.id}`;
+    await this.redisService.set(key, userSession.id, 60 * 1000); // 1 minute
   }
 }
