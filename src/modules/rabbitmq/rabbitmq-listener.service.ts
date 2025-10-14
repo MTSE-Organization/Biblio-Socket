@@ -1,17 +1,19 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitmqAdminService } from './rabbitmq-admin.service';
-import { SocketGateway } from '../socket/socket.gateway';
+import { Constant } from '@/constants';
+import { ProcessBroadcastHandler } from './cmd/process.broadcast.handler';
+import { plainToInstance } from 'class-transformer';
+import { BaseSendMsgForm } from './forms/base-send-msg.form';
 
 @Injectable()
 export class RabbitmqListenerService implements OnModuleInit {
-  private readonly logger = new Logger(RabbitmqListenerService.name);
   private notificationQueue: string;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly rabbitMQAdmin: RabbitmqAdminService,
-    private readonly socketGateway: SocketGateway
+    private readonly processBroadcastHandler: ProcessBroadcastHandler
   ) {
     this.notificationQueue = this.configService.get<string>(
       'RABBITMQ_NOTIFICATION_QUEUE'
@@ -25,16 +27,29 @@ export class RabbitmqListenerService implements OnModuleInit {
     );
   }
 
-  private handleNotification(message: string) {
-    const payload = JSON.parse(message);
+  private async handleNotification(message: string) {
+    const payload = plainToInstance(BaseSendMsgForm, JSON.parse(message));
     const data = JSON.parse(payload.data);
-    const { sessionId, message: notification } = data;
+    switch (payload.cmd) {
+      case Constant.CMD_BROADCAST:
+        await this.handleProcessBroadcast(data, payload.subCmd);
+        break;
 
-    this.socketGateway.handleSendMessgae(
-      sessionId,
-      'notification',
-      notification
-    );
-    this.logger.log(`Sent notification to session: ${sessionId}`);
+      default:
+        console.log('Unknown command:', payload.cmd);
+        break;
+    }
+  }
+
+  private async handleProcessBroadcast(data: any, subCmd: string | null) {
+    switch (subCmd) {
+      case Constant.CMD_NOTIFICATION_NEW_ORDER:
+        await this.processBroadcastHandler.handleNotificationNewOrder(data);
+        break;
+
+      default:
+        console.log('Unknown command:', subCmd);
+        break;
+    }
   }
 }

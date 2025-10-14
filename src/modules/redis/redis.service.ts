@@ -13,6 +13,19 @@ export class RedisService {
     return (await this.cacheManager.get<T>(key)) ?? null;
   }
 
+  async getKeysByPrefix(prefix: string): Promise<Set<string>> {
+    const stream = this.redisClient.scanStream({
+      match: `${prefix}*`,
+      count: 100
+    });
+    const keys = new Set<string>();
+    return new Promise((resolve, reject) => {
+      stream.on('data', (batch: string[]) => batch.forEach((k) => keys.add(k)));
+      stream.on('end', () => resolve(keys));
+      stream.on('error', reject);
+    });
+  }
+
   async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
     if (ttlSeconds) {
       await this.cacheManager.set(key, value, ttlSeconds);
