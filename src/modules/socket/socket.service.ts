@@ -20,13 +20,16 @@ export class SocketService {
         message: 'Unauthorized'
       });
       client.disconnect(true);
+      return;
     }
 
     await this.handleCacheClientSession(userSession, client);
   }
 
   getToken(client: Socket) {
-    const authHeader = client.handshake.headers[Constant.HEADER_AUTHORIZATION];
+    const authHeader =
+      client.handshake.headers[Constant.HEADER_AUTHORIZATION] ||
+      client.handshake.auth?.token;
     const token = (authHeader as string)?.replace(/^Bearer\s+/, '');
     return token;
   }
