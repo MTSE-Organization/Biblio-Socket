@@ -83,25 +83,45 @@ export class RabbitmqAdminService implements OnModuleInit, OnModuleDestroy {
     queueName: string,
     callback: (data: string) => void
   ): Promise<void> {
-    if (!this.channel) {
-      await this.connectToRabbitMQ();
-    }
+    try {
+      if (
+        !this.channel ||
+        this.channel.connection.connection.stream.destroyed
+      ) {
+        await this.connectToRabbitMQ();
+        await this.createQueueIfNotExist(queueName);
 
-    await this.createQueueIfNotExist(queueName);
+        this.channel.on('close', () => {
+          this.logger.warn(
+            'RabbitMQ channel closed, will recreate on next listen.'
+          );
+          this.channel = null;
+        });
 
-    await this.channel.consume(queueName, (msg) => {
-      if (msg) {
-        const content = msg.content.toString();
-        this.logger.log(`Message received from ${queueName}: ${content}`);
-        try {
-          callback(content);
-          this.channel.ack(msg);
-        } catch (err) {
-          this.logger.error(`Error in callback for queue ${queueName}:`, err);
-          this.channel.nack(msg, false, false); // not requeue
-        }
+        await this.channel.consume(queueName, (msg) => {
+          if (msg) {
+            const content = msg.content.toString();
+            this.logger.log(`Message received from ${queueName}: ${content}`);
+            try {
+              callback(content);
+              if (this.channel) this.channel.ack(msg);
+            } catch (err) {
+              this.logger.error(
+                `Error in callback for queue ${queueName}:`,
+                err
+              );
+              try {
+                if (this.channel) this.channel.nack(msg, false, false); // not requeue
+              } catch (nackErr) {
+                this.logger.error(`Failed to nack message:`, nackErr);
+              }
+            }
+          }
+        });
       }
-    });
+    } catch (error) {
+      this.logger.error('Error listening to RabbitMQ messages:', error);
+    }
   }
 
   async isQueueExist(queueName: string): Promise<boolean> {

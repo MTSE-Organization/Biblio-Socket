@@ -28,4 +28,26 @@ export class ProcessBroadcastHandler {
     }
     await Promise.all(promises);
   }
+
+  async handleNotificationCustomer(form: any) {
+    const keysUser: Set<string> = await this.redisService.getKeysByPrefix(
+      `usr:${form.accountId}`
+    );
+
+    const promises: Promise<void>[] = [];
+    for (const key of keysUser) {
+      // ${keyType}:${userId}:${sessionId}
+      const parts = key.split(':');
+      const userId = parts[1];
+      const sessionId = parts[2];
+
+      const message = {
+        accountId: userId,
+        ...form
+      };
+
+      this.socketGateway.handleSendMessgae(sessionId, 'notification', message);
+    }
+    await Promise.all(promises);
+  }
 }
