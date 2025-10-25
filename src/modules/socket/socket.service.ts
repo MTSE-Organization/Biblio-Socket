@@ -4,6 +4,7 @@ import { Socket } from 'socket.io';
 import { UserSession } from '../auth/user-session';
 import { Constant } from '@/constants';
 import { RedisService } from '../redis/redis.service';
+import { log } from 'console';
 
 @Injectable()
 export class SocketService {
@@ -16,7 +17,8 @@ export class SocketService {
     const token = this.getToken(client);
     const userSession = this.authService.fromToken(token) as UserSession;
     if (!userSession) {
-      client.emit('error', {
+      log('Unauthorized client connection attempt');
+      client.emit('notification', {
         message: 'Unauthorized'
       });
       client.disconnect(true);
