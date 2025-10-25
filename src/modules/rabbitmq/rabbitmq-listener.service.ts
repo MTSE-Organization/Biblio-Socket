@@ -34,7 +34,9 @@ export class RabbitmqListenerService implements OnModuleInit {
       case Constant.CMD_BROADCAST:
         await this.handleProcessBroadcast(data, payload.subCmd);
         break;
-
+      case Constant.CMD_NOTIFICATION_CUSTOMER:
+        await this.processBroadcastHandler.handleNotificationCustomer(data);
+        break;
       default:
         console.log('Unknown command:', payload.cmd);
         break;
