@@ -34,8 +34,9 @@ export class SocketGateway
     await this.socketService.handleClientConnect(client);
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    await this.socketService.handleClientDisconnect(client);
   }
 
   handleSendMessgae(sessionId: string, event: string, message: string) {

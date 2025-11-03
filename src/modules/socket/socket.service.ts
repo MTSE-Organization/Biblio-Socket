@@ -28,8 +28,25 @@ export class SocketService {
     await this.handleCacheClientSession(userSession, client);
   }
 
+  async handleClientDisconnect(client: Socket): Promise<void> {
+    const token = this.getToken(client);
+    const userSession = this.authService.fromToken(token) as UserSession;
+    if (!userSession) {
+      log('Unauthorized client connection attempt');
+      client.emit('notification', {
+        message: 'Unauthorized'
+      });
+      client.disconnect(true);
+      return;
+    }
+
+    await this.handleRemoveCacheClientSession(userSession, client);
+  }
+
   getToken(client: Socket) {
-    const authHeader = client.handshake.headers[Constant.HEADER_AUTHORIZATION];
+    const authHeader =
+      client.handshake.headers[Constant.HEADER_AUTHORIZATION] ||
+      client.handshake.auth?.token;
     const token = (authHeader as string)?.replace(/^Bearer\s+/, '');
     return token;
   }
@@ -38,5 +55,14 @@ export class SocketService {
     const keyType = userSession.getKeyType();
     const key = `${keyType}:${userSession.id}:${client.id}`;
     await this.redisService.set(key, userSession.id, 60 * 1000); // 1 minute
+  }
+
+  async handleRemoveCacheClientSession(
+    userSession: UserSession,
+    client: Socket
+  ) {
+    const keyType = userSession.getKeyType();
+    const key = `${keyType}:${userSession.id}:${client.id}`;
+    await this.redisService.delete(key);
   }
 }
